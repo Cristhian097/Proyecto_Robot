@@ -1,0 +1,387 @@
+#include <Servo.h>
+#include <SoftwareSerial.h>
+//#include <Servo.h>
+//SoftwareSerial miBT(3, 2);
+
+//cREAR UNA VARIABLE QUE GUARDE LA PSOSCION DE CADA LETRA DE LOS MOTORES
+Servo muneca;
+Servo pinza;
+
+
+String caracter;
+int vectorT [7];
+int contador;
+char signo;
+
+//PULSADORES y potenciometro
+short pul1 = A3;
+short potenciometro = A2;
+short pul2 = A1;
+
+boolean bandMotor0 = false;
+boolean bandMotor0A = false;
+
+boolean bandMotor1 = false;
+boolean bandMotor1A = false;
+
+int cont;
+int posMot0;
+int posMot1;
+int posMot2;
+short minimo = -30;
+int maximo = 1000;
+
+short minimo2 = -15;
+short maximo2 = 1000;;
+boolean bandIncre = true;
+
+
+char varMotor0;
+char varMotor1;
+char varMotor2;
+void setup() {
+
+  Serial.begin(9600);
+
+  //******** MOTORREDUCTORES ***********
+  boolean band1 = false;
+  boolean band2 = false;
+  boolean band3 = false;
+
+  //Motor 1 Hombro
+  pinMode(4, OUTPUT);
+  pinMode(5, OUTPUT);
+
+  //Motor 2 Brazo
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+
+  //Motor 3 antebrazo
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+
+  //Motor 4 Horugas
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  //___________________
+ int i;
+  while (true) {
+    int date1 = analogRead(A3);
+    int date2 = analogRead(A1);
+    int date3 =  (analogRead(A2) / 2);
+    int contM2;
+
+    Serial.print(date1);
+    Serial.print(":");
+    Serial.print(date2);
+    Serial.print(":");
+    Serial.println(date3);
+
+
+    //MOTOR 1
+    if (date1 <= 1) {
+      if (band1 == false) {
+        desactivar(5);
+        activar(4);
+        i--;
+      }
+
+    } else if (date1 > 1) {
+      i++;
+      if (i > 2) {
+        if (band1 == false) {
+          fin_carrera(4, 5 , 400);
+          contM2 = 0;
+        }
+        band1 = true;
+      }
+    }
+
+    
+        //MOTOR 2
+
+        if (date2 >= 10) {
+          if (band2 == false) {
+            desactivar(7);
+            activar(6);
+          }
+          contM2 = 0;
+        } else if (date2 < 10) {
+          contM2++;
+
+        }
+        if (contM2 >= 5) {
+          if (band2 == false) {
+            desactivar(6);
+            activar(7);
+            delay(500);
+            desactivar(7);
+            //desactivar(6);
+
+          }
+          band2 = true;
+        }
+/*
+        //Motor 3
+        if (date3 > 1) {
+          if (band3 == false) {
+            desactivar(8);
+            activar(9);
+          }
+        } else if (date3 <= 1) {
+          if (band3 == false) {
+            fin_carrera(9, 8, 200);
+          }
+            band3 = true;
+
+        }
+    */
+    if (band1 == true && band2 == true) {
+      break;
+    }
+    delay(9);
+  }
+}
+
+void loop() {
+
+  int date1 =  analogRead(pul1);
+  int date2 =  analogRead(pul2);
+  int date3 =  (analogRead(potenciometro) / 2);
+  char texto = Serial.read();
+  /*Serial.print(date1);
+    Serial.print(":");
+    Serial.print(date2);
+    Serial.print(":");*/
+  //Serial.print(texto);
+  //Serial.print(":");
+  Serial.print(date1);
+  Serial.print(":");
+  Serial.print(posMot0);
+  Serial.print(varMotor0);
+
+  Serial.print(":");
+  Serial.print(posMot1);
+  Serial.print(varMotor1);
+  
+    Serial.print(":");
+    Serial.print(posMot2);
+    Serial.println(varMotor2);
+  
+  //_______________________________________
+  //Motor 1 HOMBRO
+
+  bandMotor0 = activar(pul1, bandMotor0);
+
+  if (posMot0 >= maximo) {
+    bandMotor0A = true;
+    texto = 'C';
+    posMot0  = posMot0 - 30;
+  } else if (posMot0 == (maximo / 2)) {
+    if (bandIncre == true) {
+      minimo = minimo * 2;
+      bandIncre = false;
+    }
+
+  } else if (posMot0 < minimo) {
+    bandMotor0 = true;
+    posMot0 = 0;
+    texto = 'C';
+    if (bandIncre == false) {
+      minimo = minimo - (minimo / 2);
+      bandIncre = true;
+    }
+
+  } else {
+    bandMotor0A = false;
+  }
+
+  varMotor0 = agregarCaracter(varMotor0, bandMotor0, bandMotor0A, 4, 5, texto, 'A', 'B', 'C', posMot0);
+  posMot0 = posicionMotor(posMot0, varMotor0, 'A', 'B', 'C');
+
+  //__________________________________
+  //Motor 2 ANTEBRAZO
+  //************************************
+  if (pulsador(pul2) == true) {
+    bandMotor1 = true;
+  } else {
+    bandMotor1 = false;
+  }
+  bandMotor1 = activar(pul2, bandMotor1);
+
+  if (date2 <= 0) {
+    posMot1 = 0;
+    texto = 'F';
+    fin_carrera(6, 7, 200);
+  }
+
+  if (posMot1 >= maximo2) {
+    fin_carrera(7, 6 , 500);
+    // bandMotor1=true;
+    posMot1 = posMot1 - 30;
+    texto = 'F';
+
+  } else if (posMot1 <= -20) {
+    //bandMotor1A =true;
+    // bandMotor1A=true;
+    posMot1 = 0;
+    texto = 'F';
+
+    fin_carrera(6, 7, 200);
+  } else {
+    //bandMotor1=false;
+    // bandMotor1A=false;
+  }
+  posMot1 = posicionMotor(posMot1, varMotor1, 'D', 'E', 'F');
+  varMotor1 = agregarCaracter(varMotor1, bandMotor1, bandMotor1A, 6, 7, texto, 'D', 'E', 'F', posMot1);
+
+
+  //MOTOR 3 CODO
+  if (date3 >= 40
+  Ç```````````````````````````````````````````````````````````````````````````````````````````````````````'-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------0) {
+    posMot2 = date3;
+    fin_carrera(9, 8, 50);
+    texto = 'I';
+  } else if (date3 <= 0) {
+    texto = 'I';
+    //posMot2=0;
+    fin_carrera(8, 9, 50);
+    posMot2 = date3;
+  }
+
+  posMot2 = posicionMotor(date3, varMotor2, 'G', 'H', 'I');
+  varMotor2 = agregarCaracter(varMotor2, false, false, 8, 9, texto, 'G', 'H', 'I', posMot2);
+
+  delay(1);
+
+
+}
+
+//***********************************************
+void activar(int pin) {
+  digitalWrite(pin, HIGH);
+}
+void desactivar(int pin) {
+  digitalWrite(pin, LOW);
+}
+
+
+char motorreductores(char varMotor, boolean bandera, boolean bandera2, short pin1, short pin2, char text0, char text1, char text2, char text3, int contMotor) {
+  String palabra;
+
+
+  //   contMotor
+  if (bandera == true) {
+    fin_carrera(pin1, pin2, 400);
+    //contMotor = 0;
+    palabra = "Fin de carrera";
+    varMotor = text3;
+
+  } else {
+
+    if (bandera2 == true) {
+      palabra = "Fin De Carrera 2";
+      varMotor = text3;
+      fin_carrera(pin2, pin1, 400);
+      //contMotor -= 30;
+    } else {
+      if (text0 == text1) {
+        palabra = "Arriba";
+        varMotor = text1;
+        desactivar(pin2);
+        activar(pin1);
+
+      } else if (text0 == text2) {
+        palabra = "Abajo";
+        varMotor = text2;
+        desactivar(pin1);
+        activar(pin2);
+
+      } else if (text0 == text3) {
+        palabra = "Detiene";
+        varMotor = text3;
+        desactivar(pin1);
+        desactivar(pin2);
+      }
+
+    }
+
+  }
+  return varMotor;
+}
+
+
+
+boolean pulsador(int pin) {
+  boolean band;
+  int numero = analogRead(pin);
+  if (numero > 2 && numero < 4) {
+    cont++;
+  } else {
+    cont = 0;
+    band = false;
+  }
+  if (cont > 7 ) {
+    band = true;
+    Serial.println("......Activa fin de carrera motor........");
+  }
+
+  return band;
+}
+
+
+void fin_carrera(int pin1, int pin2, int tiempo) {
+
+  desactivar(pin1);
+  activar(pin2);
+  delay(tiempo);
+  desactivar(pin1);
+  desactivar(pin2);
+  Serial.println("Hola putos");
+}
+
+
+boolean  activar(int pin, boolean bandAct) {
+  if (pulsador(pin) == true) {
+    bandAct = true;
+  } else {
+    bandAct = false;
+  }
+  return bandAct;
+}
+
+int incrementar(boolean banderaInc, int minimoM) {
+  if (banderaInc == true) {
+    minimoM = minimoM * 2;
+  } else if (banderaInc == false) {
+    minimoM = minimoM - (minimo / 2);
+  }
+
+  return minimoM;
+}
+
+
+
+//___________________________
+
+
+int posicionMotor(int contPos, char text, char t1, char t2, char t3) {
+
+  if (text == t1) {
+    contPos--;
+  } else if (text == t2) {
+    contPos++;
+  } else if (text == t3) {
+
+  }
+
+  return contPos;
+}
+
+
+char agregarCaracter(char varMotor, boolean bandM, boolean bandMA, int pin1, int pin2 , char textoT, char t1, char t2, char t3, int contM) {
+  if (textoT == t1 || textoT == t2 || textoT == t3) {
+    varMotor = motorreductores(varMotor, bandM, bandMA, pin1, pin2, textoT, t1, t2, t3, contM);
+  }
+  return varMotor;
+}
